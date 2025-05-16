@@ -1,4 +1,4 @@
-package com.resumeAi.resume_upload_ai;
+package com.resumeAi.resume;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
