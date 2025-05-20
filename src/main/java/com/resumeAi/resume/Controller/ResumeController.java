@@ -2,10 +2,12 @@ package com.resumeAi.resume.Controller;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.resumeAi.resume.DTO.ResumeResponse;
 import com.resumeAi.resume.Entity.Resume;
 import com.resumeAi.resume.Repository.ResumeRepository;
-import com.resumeAi.resume.Service.OpenAIService;
-import com.resumeAi.resume.Service.ResumeKafkaProducer;
+import com.resumeAi.resume.Service.Impl.ResumeKafkaProducerImpl;
+import com.resumeAi.resume.Service.Impl.ResumeServiceImpl;
+import com.resumeAi.resume.Service.OpenAiService;
 import com.resumeAi.resume.Service.ResumeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -29,17 +31,17 @@ import java.util.Optional;
 @RequestMapping("/api/resumes")
 public class ResumeController {
     private final ResumeService service;
-    private final OpenAIService openAIService;
+    private final OpenAiService openAiService;
 
     @Autowired
     private ResumeRepository resumeRepository;
 
     @Autowired
-    ResumeKafkaProducer resumeKafkaProducer;
+    ResumeKafkaProducerImpl resumeKafkaProducerImpl;
 
-    public ResumeController(ResumeService service, OpenAIService openAIService) {
+    public ResumeController(ResumeServiceImpl service, OpenAiService openAiService) {
         this.service = service;
-        this.openAIService = openAIService;
+        this.openAiService = openAiService;
     }
 
     // 1. Upload API
@@ -56,7 +58,7 @@ public class ResumeController {
             resume.setContent(content);
             Resume saved = resumeRepository.save(resume);
 
-            resumeKafkaProducer.sendResumeId(saved.getId());
+            resumeKafkaProducerImpl.sendResumeId(saved.getId());
 
             return ResponseEntity.ok("Uploaded successfully with ID: " + resume.getId());
 
@@ -92,7 +94,7 @@ public class ResumeController {
             String jsonRequest = mapper.writeValueAsString(requestBody);
 
             // Call OpenAI
-            String aiResponse = openAIService.callOpenAiApiWithRetry(jsonRequest);
+            String aiResponse = openAiService.callOpenAiApiWithRetry(jsonRequest);
 
             // Save AI feedback
             resume.setAiFeedback(aiResponse);
@@ -106,9 +108,22 @@ public class ResumeController {
         }
     }
 
-    @GetMapping("/list")
-    public List<Resume> getAllResumes() {
-        return service.getAllResumes();
-    }
 
+    @GetMapping("/List")
+    public ResponseEntity<ResumeResponse> getList() {
+        ResumeResponse response = new ResumeResponse();
+        try {
+            List<Resume> data = service.getAllResumes();
+            response.setData(data);
+            response.setSuccessMessage("SUCCESS!!");
+            response.setStatusCode(HttpStatus.OK.value());
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e) {
+            response.setErrorMessage("An error Occurred !!");
+            response.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }
