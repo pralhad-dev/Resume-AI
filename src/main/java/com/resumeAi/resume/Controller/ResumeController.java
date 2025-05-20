@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.resumeAi.resume.Entity.Resume;
 import com.resumeAi.resume.Repository.ResumeRepository;
 import com.resumeAi.resume.Service.OpenAIService;
+import com.resumeAi.resume.Service.ResumeKafkaProducer;
 import com.resumeAi.resume.Service.ResumeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -33,6 +34,9 @@ public class ResumeController {
     @Autowired
     private ResumeRepository resumeRepository;
 
+    @Autowired
+    ResumeKafkaProducer resumeKafkaProducer;
+
     public ResumeController(ResumeService service, OpenAIService openAIService) {
         this.service = service;
         this.openAIService = openAIService;
@@ -50,7 +54,9 @@ public class ResumeController {
             Resume resume = new Resume();
             resume.setFileName(file.getOriginalFilename());
             resume.setContent(content);
-            resumeRepository.save(resume);
+            Resume saved = resumeRepository.save(resume);
+
+            resumeKafkaProducer.sendResumeId(saved.getId());
 
             return ResponseEntity.ok("Uploaded successfully with ID: " + resume.getId());
 
