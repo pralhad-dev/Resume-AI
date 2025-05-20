@@ -1,6 +1,7 @@
-package com.resumeAi.resume.Service;
+package com.resumeAi.resume.Service.Impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.resumeAi.resume.Service.OpenAiService;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -17,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class OpenAIService {
+public class OpenAIServiceImpl implements OpenAiService {
     @Value("${openai.api.key}")
     private String apiKey;
 
@@ -28,7 +29,15 @@ public class OpenAIService {
     private String model;
 
     private final OkHttpClient client = new OkHttpClient();
+    private final WebClient webClient;
 
+    public OpenAIServiceImpl(WebClient.Builder webClientBuilder,
+                             @Value("${openai.api.key}") String apiKey) {
+        this.webClient = webClientBuilder.baseUrl("https://api.openai.com/v1").build();
+        this.apiKey = apiKey;
+    }
+
+    @Override
     public String analyzeResume(String content) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
 
@@ -58,14 +67,8 @@ public class OpenAIService {
             return (String) messageObj.get("content");
         }
     }
-    private final WebClient webClient;
 
-    public OpenAIService(WebClient.Builder webClientBuilder,
-                         @Value("${openai.api.key}") String apiKey) {
-        this.webClient = webClientBuilder.baseUrl("https://api.openai.com/v1").build();
-        this.apiKey = apiKey;
-    }
-
+    @Override
     public String callOpenAiApiWithRetry(String requestBody) throws Exception {
         int maxAttempts = 3;
         int delay = 2000; // initial delay: 2 seconds
